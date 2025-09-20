@@ -1,0 +1,2 @@
+'use client'
+export default function TableOfContents({items=[]}){if(!items.length)return null;return (<nav className='not-prose sticky top-24 border rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-sm'><div className='font-semibold mb-2'>On this page</div><ul className='space-y-1'>{items.map(h=>(<li key={h.id} className={h.level>2?'ml-4':''}><a href={`#${h.id}`} className='underline'>{h.text}</a></li>))}</ul></nav>)}

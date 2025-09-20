@@ -1,0 +1,1 @@
+export const metadata={title:'Terms and Conditions'}; export default function Terms(){return (<section className='max-w-3xl mx-auto px-4 py-12'><h1 className='text-3xl font-bold mb-4'>Terms and Conditions</h1><p className='mb-4'>Content is for informational purposes only and not medical advice.</p></section>)}

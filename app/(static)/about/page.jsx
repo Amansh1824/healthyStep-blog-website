@@ -1,0 +1,1 @@
+export const metadata={title:'About'}; export default function About(){return (<section className='mx-auto max-w-3xl px-4 py-12'><h1 className='text-3xl font-bold'>About HealthyStep</h1><p className='mt-4 opacity-80'>Beginner-friendly home fitness and healthy recipes. General wellness info only, not medical advice.</p></section>)}

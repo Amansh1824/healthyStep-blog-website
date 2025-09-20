@@ -1,0 +1,109 @@
+name: Edit post from Issue (PR)
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  edit-post:
+    if: contains(github.event.issue.labels.*.name, 'edit')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Apply edits
+        id: apply
+        run: |
+          node -e "
+          const fs=require('fs'); const path=require('path'); const { execSync }=require('child_process');
+          const evt=JSON.parse(process.env.GH_EVENT);
+          const body=evt.issue.body||'';
+          const sec=[...body.matchAll(/###\s+([^\n]+)\n+([\s\S]*?)(?=\n+###\s+|$)/g)].reduce((a,[,k,v])=>(a[k.trim()]=v.trim(),a),{});
+          let slug=(sec['Slug of the post (preferred)']||'').trim();
+          const title=(sec['Exact Title (if slug unknown)']||'').trim();
+          const fmOverride=(sec['Frontmatter overrides (YAML)']||'').trim();
+          let newBody=(sec['New body content (Markdown)']||'').trim();
+          const banner=(sec['Optional — attach ONE new banner image here']||'').trim();
+          const postsDir=path.join(process.cwd(),'content','posts');
+          const list=fs.existsSync(postsDir)?fs.readdirSync(postsDir).filter(f=>/\.mdx?$/.test(f)):[];
+          let file=null;
+          if(slug){
+            const cand=path.join(postsDir,slug+'.mdx'); const cand2=path.join(postsDir,slug+'.md');
+            if(fs.existsSync(cand)) file=cand; else if(fs.existsSync(cand2)) file=cand2;
+          }else if(title){
+            for(const f of list){
+              const txt=fs.readFileSync(path.join(postsDir,f),'utf8');
+              const m=txt.match(/^---[\s\S]*?title:\s*"?(.+?)"?[\s\S]*?---/);
+              if(m && m[1].trim().toLowerCase()===title.toLowerCase()){ file=path.join(postsDir,f); slug=f.replace(/\.mdx?$/,''); break; }
+            }
+          }
+          if(!file){ console.error('Could not resolve post file'); process.exit(1); }
+          const branch='edit/'+slug+'-'+Date.now();
+          execSync('git checkout -b '+branch);
+
+          let raw=fs.readFileSync(file,'utf8');
+          const fmMatch=raw.match(/^---[\s\S]*?---/);
+          let fmBlock=fmMatch?fmMatch[0]:null;
+          let content=raw.replace(/^---[\s\S]*?---\n?/, '');
+
+          if(newBody){ content=newBody; }
+
+          if(fmOverride){
+            // naive merge: replace fields present in override
+            const toObj=yaml=>{ const o={}; (yaml.split(/\r?\n/)).forEach(l=>{ const m=l.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/); if(m){ o[m[1]]=m[2]; }}); return o; };
+            const stringify=o=>Object.entries(o).map(([k,v])=>`${k}: ${v}`).join('\n');
+            const baseObj=toObj(fmBlock.replace(/^---|---$/g,''));
+            const overObj=toObj(fmOverride);
+            const merged={...baseObj,...overObj};
+            fmBlock='---\n'+stringify(merged)+'\n---';
+          }
+
+          // Banner handling if image URL present
+          const imgMatch=banner.match(/!\[[^\]]*\]\((https?:\/\/[^\)]+)\)/) || banner.match(/(https?:\/\/\S+)/);
+          if(imgMatch){
+            const url=(imgMatch[1]||imgMatch[0]).trim();
+            const m=url.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i); const ext=(m?m[1].toLowerCase():'jpg');
+            const uploads=path.join(process.cwd(),'public','uploads');
+            if(!fs.existsSync(uploads)) fs.mkdirSync(uploads,{recursive:true});
+            const out=path.join(uploads, slug+'-banner.'+ext);
+            try{ execSync(`curl -L --silent --fail -o ${JSON.stringify(out)} ${JSON.stringify(url)}`); 
+              // update cover in fmBlock
+              fmBlock = fmBlock.replace(/cover:\s*\"?.*\"?/,'cover: \"/uploads/'+slug+'-banner.'+ext+'\"');
+            }catch(e){ console.error('Banner download failed:', e.message); }
+          }
+
+          const result=(fmBlock?fmBlock+'\n':'')+content+'\n';
+          fs.writeFileSync(file,result,'utf8');
+          console.log('::set-output name=branch::'+branch);
+          console.log('::set-output name=slug::'+slug);
+          "
+        env:
+          GH_EVENT: ${{ toJson(github.event) }}
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/posts/*.mdx public/uploads/* || true
+          git commit -m "Edit post via issue #${{ github.event.issue.number }}"
+
+      - name: Push branch
+        run: |
+          git push --set-upstream origin $(git branch --show-current)
+
+      - name: Open Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Edit: ${{ steps.apply.outputs.slug }} (from issue #${{ github.event.issue.number }})"
+          body: "Automated edit from issue #${{ github.event.issue.number }}"
+          branch: ${{ steps.apply.outputs.branch }}
+          base: "main"

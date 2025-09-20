@@ -1,0 +1,1 @@
+export default function WorkoutStep({title,time,rest,tip}){return (<div className='not-prose rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/20 p-4'><div className='font-semibold'>{title}</div><div className='text-sm opacity-80'>{time}{rest?` • Rest ${rest}`:''}</div>{tip&&<p className='mt-2 text-sm'>{tip}</p>}</div>)}

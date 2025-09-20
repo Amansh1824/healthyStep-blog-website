@@ -1,0 +1,1 @@
+export default function CtaBox({title,href,children}){return (<a href={href} className='not-prose block rounded-2xl p-5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-amber-500 text-white shadow hover:opacity-95'><div className='text-lg font-semibold'>{title}</div><div className='opacity-95'>{children}</div></a>)}

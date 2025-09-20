@@ -1,0 +1,20 @@
+name: 🗑️ Delete Blog Post
+description: Remove a published post by slug or exact title
+title: "[Delete]: <slug-or-title>"
+labels: ["delete"]
+body:
+  - type: input
+    id: slug
+    attributes:
+      label: Slug of the post (preferred)
+      placeholder: e.g. 10-minute-beginner-home-workout
+  - type: input
+    id: title
+    attributes:
+      label: Exact Title (if slug unknown)
+      placeholder: e.g. 10-Minute Beginner Home Workout (No Equipment)
+  - type: input
+    id: reason
+    attributes:
+      label: Reason (optional)
+      placeholder: e.g. Outdated / duplicate / requested by author

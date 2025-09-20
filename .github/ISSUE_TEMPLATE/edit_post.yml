@@ -1,0 +1,36 @@
+name: ✏️ Edit Blog Post
+description: Request changes to a blog post (creates a Pull Request)
+title: "[Edit]: <slug-or-title>"
+labels: ["edit"]
+body:
+  - type: input
+    id: slug
+    attributes:
+      label: Slug of the post (preferred)
+      placeholder: e.g. 10-minute-beginner-home-workout
+  - type: input
+    id: title
+    attributes:
+      label: Exact Title (if slug unknown)
+      placeholder: e.g. 10-Minute Beginner Home Workout (No Equipment)
+  - type: textarea
+    id: new_frontmatter
+    attributes:
+      label: Frontmatter overrides (YAML)
+      description: |
+        Only include fields you want to change, e.g.
+        title: "New Title"
+        description: "New description"
+        category: "recipes"
+        tags: ["beginner","protein"]
+  - type: textarea
+    id: new_content
+    attributes:
+      label: New body content (Markdown)
+      description: |
+        Paste the full new content. If left blank, body will remain unchanged.
+  - type: textarea
+    id: banner
+    attributes:
+      label: Optional — attach ONE new banner image here
+      description: Drag & drop ONE image into this box to upload. The first image URL will be used as banner.

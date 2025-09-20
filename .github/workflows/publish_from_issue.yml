@@ -1,0 +1,62 @@
+name: Publish post from Issue (with banner)
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  build-post:
+    if: contains(github.event.issue.labels.*.name, 'publish')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Build MDX from issue
+        run: |
+          node -e "
+          const fs=require('fs'); const path=require('path'); const { execSync }=require('child_process');
+          const evt=JSON.parse(process.env.GH_EVENT);
+          const body=evt.issue.body||'';
+          const sections=[...body.matchAll(/###\s+([^\n]+)\n+([\s\S]*?)(?=\n+###\s+|$)/g)].reduce((a,[,k,v])=> (a[k.trim()]=v.trim(),a),{});
+          const title=(sections['Title']||evt.issue.title.replace(/^\[Post\]:\s*/,'').trim());
+          const description=(sections['Short Description']||'');
+          const category=((sections['Category']||'workouts').toLowerCase());
+          const tags=(sections['Tags (comma-separated)']||'').split(',').map(s=>s.trim()).filter(Boolean);
+          let content=(sections['Post Content (Markdown)']||'');
+
+          const imgMatch=content.match(/!\[[^\]]*\]\((https?:\/\/[^\)]+)\)/);
+          const bannerUrl = imgMatch ? imgMatch[1] : null;
+
+          const date=new Date().toISOString().slice(0,10);
+          const slug=title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').slice(0,80);
+          const uploads=path.join(process.cwd(),'public','uploads'); if(!fs.existsSync(uploads)) fs.mkdirSync(uploads,{recursive:true});
+          let coverPath=null;
+          if(bannerUrl){
+            const m=bannerUrl.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i); const ext=(m?m[1].toLowerCase():'jpg');
+            const out=path.join(uploads, `${slug}-banner.${ext}`);
+            try{ execSync(`curl -L --silent --fail -o ${JSON.stringify(out)} ${JSON.stringify(bannerUrl)}`); coverPath=`/uploads/${slug}-banner.${ext}`; content=content.replace(imgMatch[0],'').trim(); }catch(e){ console.error('Banner download failed:', e.message); }
+          }
+          const cover = coverPath || \"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%23059669'/><stop offset='60%' stop-color='%230ea5e9'/><stop offset='100%' stop-color='%23f59e0b'/></linearGradient></defs><rect width='100%' height='100%' fill='url(%23g)'/><text x='60' y='360' font-family='Inter,Arial' font-size='64' fill='white'>\\" + title.replace(/"/g,'\\\"') + \"</text></svg>\";
+
+          const fm=['---',`title: \"${title.replace(/"/g,'\\\"')}\"`,`description: \"${description.replace(/"/g,'\\\"')}\"`,`date: \"${date}\"`,`tags: [${tags.map(t=>`\"${t}\"`).join(', ')}]`,`category: \"${category}\"`,`cover: \"${cover}\"`,'---',''].join('\n');
+          const outDir=path.join(process.cwd(),'content','posts'); if(!fs.existsSync(outDir)) fs.mkdirSync(outDir,{recursive:true});
+          const outFile=path.join(outDir, `${slug}.mdx`); fs.writeFileSync(outFile, fm + content + '\n', 'utf8'); console.log('Wrote', outFile);
+          "
+        env:
+          GH_EVENT: ${{ toJson(github.event) }}
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/posts/*.mdx public/uploads/* || true
+          git commit -m "Publish from issue #${{ github.event.issue.number }}"
+          git push

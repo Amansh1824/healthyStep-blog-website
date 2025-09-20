@@ -1,0 +1,43 @@
+name: ✍️ New Blog Post
+description: Write and publish a new blog post
+title: "[Post]: <Your post title here>"
+labels: ["publish"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      placeholder: e.g. 10-Minute Core Workout for Beginners
+    validations:
+      required: true
+  - type: input
+    id: description
+    attributes:
+      label: Short Description
+      placeholder: One-sentence summary for cards & SEO
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options: [workouts, recipes, habits, gear]
+    validations:
+      required: true
+  - type: input
+    id: tags
+    attributes:
+      label: Tags (comma-separated)
+      placeholder: beginner, home-workout, no-equipment
+  - type: textarea
+    id: content
+    attributes:
+      label: Post Content (Markdown)
+      description: |
+        You can attach **one banner image** by dragging it into this box (or clicking to upload).
+        The first image attached will be used as the banner.
+      placeholder: |
+        ### Intro
+        Write your content here...
+    validations:
+      required: true

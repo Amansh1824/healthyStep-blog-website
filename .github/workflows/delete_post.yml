@@ -1,0 +1,67 @@
+name: Delete post from Issue
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  delete-post:
+    if: contains(github.event.issue.labels.*.name, 'delete')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve file path
+        id: resolve
+        run: |
+          node -e "
+          const fs=require('fs'); const path=require('path');
+          const evt = JSON.parse(process.env.GH_EVENT);
+          const body = evt.issue.body || '';
+          const sections = [...body.matchAll(/###\s+([^\n]+)\n+([\s\S]*?)(?=\n+###\s+|$)/g)].reduce((a,[,k,v]) => (a[k.trim()] = v.trim(), a), {});
+          let slug = (sections['Slug of the post (preferred)'] || '').trim();
+          const title = (sections['Exact Title (if slug unknown)'] || '').trim();
+          const postsDir = path.join(process.cwd(),'content','posts');
+          let file = null;
+          const list = fs.existsSync(postsDir) ? fs.readdirSync(postsDir).filter(f=>/\.mdx?$/.test(f)) : [];
+          if (slug) {
+            const cand = path.join(postsDir, slug + '.mdx');
+            const cand2 = path.join(postsDir, slug + '.md');
+            if (fs.existsSync(cand)) file = cand; else if (fs.existsSync(cand2)) file = cand2;
+          } else if (title) {
+            for (const f of list) {
+              const txt = fs.readFileSync(path.join(postsDir, f), 'utf8');
+              const m = txt.match(/^---[\s\S]*?title:\s*"?(.+?)"?[\s\S]*?---/);
+              if (m && m[1].trim().toLowerCase() === title.toLowerCase()) { file = path.join(postsDir, f); break; }
+            }
+          }
+          if (!file) { console.error('Could not resolve file from slug/title'); process.exit(1); }
+          const base = path.basename(file).replace(/\.mdx?$/,'');
+          const uploads = path.join(process.cwd(),'public','uploads');
+          const bannerCandidates = ['jpg','jpeg','png','webp','gif'].map(ext => path.join(uploads, base + '-banner.' + ext)).filter(p => fs.existsSync(p));
+          console.log('::set-output name=file::' + file.replace(/\n/g,''));
+          console.log('::set-output name=slug::' + base.replace(/\n/g,''));
+          console.log('::set-output name=banners::' + JSON.stringify(bannerCandidates));
+          "
+        env:
+          GH_EVENT: ${{ toJson(github.event) }}
+
+      - name: Delete files
+        run: |
+          FILE="${{ steps.resolve.outputs.file }}"
+          echo "Deleting $FILE"
+          git rm -f "$FILE"
+          echo "Deleting possible banners"
+          node -e "const b=JSON.parse(process.env.BANNERS||'[]'); const {execSync}=require('child_process'); for(const p of b){ try{ execSync(`git rm -f ${JSON.stringify(p)}`); }catch(e){} }"
+        env:
+          BANNERS: ${{ steps.resolve.outputs.banners }}
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Delete post ${{ steps.resolve.outputs.slug }} via issue #${{ github.event.issue.number }}"
+          git push
