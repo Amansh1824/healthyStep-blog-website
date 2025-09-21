@@ -8,8 +8,8 @@
     "sitemap": "next-sitemap"
   },
   "dependencies": {
-     "@vercel/analytics": "^1.1.1",
-     "@vercel/speed-insights": "^1.0.10",
+    "@vercel/analytics": "^1.1.1",
+    "@vercel/speed-insights": "^1.0.10",
     "@giscus/react": "^3.0.0",
     "framer-motion": "^11.0.0",
     "gray-matter": "^4.0.3",
