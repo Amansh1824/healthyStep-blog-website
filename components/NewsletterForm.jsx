@@ -12,7 +12,7 @@ export default function NewsletterForm() {
 
     try {
       const res = await fetch(
-        " https://buttondown.com/as8947007", // <-- CHANGE THIS
+        "https://buttondown.com/refer/as8947007", // <-- CHANGE THIS
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
