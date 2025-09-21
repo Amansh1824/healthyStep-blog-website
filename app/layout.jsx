@@ -1,4 +1,7 @@
 import '../styles/globals.css';
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 
 export const metadata = {
   metadataBase: new URL('https://healthystep.in'),
@@ -32,7 +35,9 @@ export default function RootLayout({ children }) {
             <p className="mt-2"><a className="underline" href="/privacy">Privacy Policy</a> • <a className="underline" href="/terms">Terms</a></p>
           </div>
         </footer>
-        
+        <Analytics />
+        <SpeedInsights />
+
       </body>
     </html>
   );
