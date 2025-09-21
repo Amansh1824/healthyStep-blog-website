@@ -12,7 +12,7 @@ export default function NewsletterForm() {
 
     try {
       const res = await fetch(
-        "https://buttondown.email/api/emails/embed-subscribe/YOUR_USERNAME", // <-- CHANGE THIS
+        " https://buttondown.com/as8947007", // <-- CHANGE THIS
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
