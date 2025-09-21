@@ -1,7 +1,7 @@
 // app/newsletter/page.jsx  (SERVER component – no "use client")
 export const metadata = { title: "Newsletter" };
 
-import NewsletterForm from "@/components/NewsletterForm";
+import NewsletterForm from "../../components/NewsletterForm";
 
 export default function NewsletterPage() {
   return (
